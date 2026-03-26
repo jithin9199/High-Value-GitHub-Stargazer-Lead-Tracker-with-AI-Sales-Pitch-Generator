@@ -1,0 +1,282 @@
+{
+  "name": "High-Value GitHub Stargazer Lead Tracker with AI Sales Pitch Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/n8n-io/n8n/stargazers",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "10"
+            },
+            {
+              "name": "page",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "92d47c64-0a69-422b-8237-04a03d563646",
+      "name": "Get Repository Stargazers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        480,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "login",
+        "options": {}
+      },
+      "id": "afc46300-573a-49fd-b95f-c7a7ad884072",
+      "name": "Split Stargazers",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        704,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/users/' + $json.login }}",
+        "options": {}
+      },
+      "id": "e52a1baa-c047-4137-b59f-fbc980897633",
+      "name": "Fetch User Profile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        928,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.public_repos }}",
+              "rightValue": 100,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "id-2",
+              "leftValue": "={{ $json.public_repos }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "30cda89e-6650-4e3f-bc75-fdc2630aea6d",
+      "name": "Filter High-Value Leads",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1152,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        256
+      ],
+      "id": "637adfca-a4bc-4299-8b39-db8b8db6c4e6",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "KLYNIM9PZzFcZiBW",
+          "name": "Google Gemini(PaLM) Api account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a sales assistant.\n\nName: {{$json[\"name\"]}}\nCompany: {{$json[\"company\"]}}\nBio: {{$json[\"bio\"]}}\n\nWrite a highly professional one sentence pitch explaining why this person is a high value lead.\nStart with the person’s name as a title on the first line.\nThen provide a single structured sentence that clearly highlights their strategic relevance, decision making influence, business potential, and alignment with our goals.\nEnsure the tone is formal, concise, and impactful. Avoid symbols and keep the wording polished and executive level.",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1376,
+        32
+      ],
+      "id": "e955a6a8-31b0-47c6-ad64-d916982cbadc",
+      "name": "Basic LLM Chain",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0AP224NYKE",
+          "mode": "list",
+          "cachedResultName": "new-channel"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1728,
+        32
+      ],
+      "id": "a55ae487-e32d-4e18-81e7-ccb0103a38cb",
+      "name": "Send a message1",
+      "webhookId": "3bb8dd04-140a-44dd-a03b-c17c38010017",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "CTDixhPclHh1Iwl4",
+          "name": "Slack OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "fd9755e5-797d-49a2-bd89-3dd12fb90e6b",
+      "name": "New Stargazers",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        256,
+        32
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Repository Stargazers": {
+      "main": [
+        [
+          {
+            "node": "Split Stargazers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Stargazers": {
+      "main": [
+        [
+          {
+            "node": "Fetch User Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch User Profile": {
+      "main": [
+        [
+          {
+            "node": "Filter High-Value Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter High-Value Leads": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Stargazers": {
+      "main": [
+        [
+          {
+            "node": "Get Repository Stargazers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "15be0c1f-b4a9-4a2b-9dac-fcbc7e13cd55",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3ed1779f6a62a77677e82913424542bee17ac7caf9824c729841e0bb5f9e531c"
+  },
+  "id": "ejzxhfSUpuQix6fK",
+  "tags": []
+}
